@@ -6,9 +6,11 @@ import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Rule
+import org.junit.runner.RunWith
 import org.junit.Test
 import org.junit.rules.TemporaryFolder
 import org.mockito.ArgumentMatchers.anyString
+import org.robolectric.RobolectricTestRunner
 import org.mockito.Mock
 import org.mockito.Mockito.`when`
 import org.mockito.MockitoAnnotations
@@ -16,6 +18,7 @@ import org.mockito.kotlin.mock
 import java.io.ByteArrayInputStream
 import java.io.File
 
+@RunWith(RobolectricTestRunner::class)
 class ModelManagerTest {
 
     @get:Rule
@@ -105,5 +108,22 @@ class ModelManagerTest {
         
         // Then
         assertFalse("Should return false when voices.bin or espeak-ng-data is missing", result)
+    }
+
+    @Test
+    fun testIsModelPrepared_ReturnsFalseWhenDataDirIsFile() {
+        // Given a directory with essential files but espeak-ng-data is a file
+        val modelDir = File(mockFilesDir, "kokoro")
+        modelDir.mkdirs()
+        File(modelDir, "model.onnx").createNewFile()
+        File(modelDir, "tokens.txt").createNewFile()
+        File(modelDir, "voices.bin").createNewFile()
+        File(modelDir, "espeak-ng-data").createNewFile()
+
+        // When
+        val result = ModelManager.isModelPrepared(mockFilesDir)
+
+        // Then
+        assertFalse("Should return false when espeak-ng-data is not a directory", result)
     }
 }

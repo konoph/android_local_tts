@@ -16,7 +16,7 @@ class MainActivity : AppCompatActivity() {
         val statusText = findViewById<TextView>(R.id.statusText)
         val openSettingsButton = findViewById<Button>(R.id.openSettingsButton)
 
-        val isPrepared = ModelManager.isModelPrepared(this.filesDir)
+        val isPrepared = ModelManager.isModelPrepared(filesDir)
         statusText.text = if (isPrepared) {
             "モデル準備完了: Kokoro-82M (Sherpa-ONNX)"
         } else {

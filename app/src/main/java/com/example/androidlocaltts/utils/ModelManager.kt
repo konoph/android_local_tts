@@ -22,8 +22,8 @@ object ModelManager {
         val voicesFile = File(modelDir, "voices.bin")
         val dataDir = File(modelDir, "espeak-ng-data")
         
-        return modelFile.exists() && tokensFile.exists() && 
-               voicesFile.exists() && dataDir.exists()
+        return modelFile.exists() && tokensFile.exists() &&
+               voicesFile.exists() && dataDir.isDirectory
     }
 
     fun copyAssets(context: Context): Boolean {
