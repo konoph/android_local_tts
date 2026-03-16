@@ -14,7 +14,12 @@ class KokoroTtsService : TextToSpeechService() {
     private const val TAG = "KokoroTtsService"
     private lateinit var engine: SherpaOnnxTtsEngine
     private val serviceScope = CoroutineScope(Dispatchers.Main + SupervisorJob())
+    
+    @Volatile
     private var isEngineReady = false
+    
+    // Ongoing synthesis job to allow cancellation
+    private var synthesisJob: Job? = null
 
     override fun onCreate() {
         super.onCreate()
@@ -22,7 +27,7 @@ class KokoroTtsService : TextToSpeechService() {
         
         serviceScope.launch(Dispatchers.IO) {
             // 1. Prepare assets if not already done
-            if (!ModelManager.isModelPrepared(this@KokoroTtsService)) {
+            if (!ModelManager.isModelPrepared(this@KokoroTtsService.filesDir)) {
                 Log.i(TAG, "Models not prepared. Copying from assets...")
                 ModelManager.copyAssets(this@KokoroTtsService)
             }
@@ -39,6 +44,7 @@ class KokoroTtsService : TextToSpeechService() {
 
     override fun onDestroy() {
         super.onDestroy()
+        synthesisJob?.cancel()
         engine.release()
         serviceScope.cancel()
     }
@@ -74,14 +80,23 @@ class KokoroTtsService : TextToSpeechService() {
             return
         }
 
+        // Cancel previous job if it's still running
+        synthesisJob?.cancel()
+
         // Use a dedicated scope for synthesis to avoid blocking
-        serviceScope.launch(Dispatchers.IO) {
-            engine.synthesize(text, speechRate, callback)
+        synthesisJob = serviceScope.launch(Dispatchers.IO) {
+            try {
+                engine.synthesize(text, speechRate, callback)
+            } finally {
+                if (synthesisJob?.isActive == false) {
+                    Log.d(TAG, "Synthesis job cancelled")
+                }
+            }
         }
     }
 
     override fun onStop() {
         Log.d(TAG, "Synthesis stopped by system")
-        // Mutex in engine ensures we don't crash, but we could add a cancellation flag if needed
+        synthesisJob?.cancel()
     }
 }
