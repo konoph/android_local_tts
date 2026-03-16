@@ -46,52 +46,56 @@ git commit -m "chore: create assets directory for kokoro model"
 
 ---
 
-## Chunk 2: Model Management
+## Chunk 2: Model Management & Testing
 
-### Task 2.1: Implement Asset Manager
+### Task 2.1: Implement Robust ModelManager
 **Files:**
-- Create: `app/src/main/java/com/example/androidlocaltts/utils/ModelManager.kt`
+- Create/Modify: `app/src/main/java/com/example/androidlocaltts/utils/ModelManager.kt`
+- Test: `app/src/test/java/com/example/androidlocaltts/utils/ModelManagerTest.kt`
 
-- [ ] **Step 1: Implement `copyAssets` function to copy models to `context.filesDir`**
-- [ ] **Step 2: Implement check for already copied files**
-- [ ] **Step 3: Commit**
+- [ ] **Step 1: Write failing test for recursive asset checking**
+    - `isModelPrepared` should check for `model.onnx`, `tokens.txt`, `voices.bin`, and `espeak-ng-data/` directory.
+- [ ] **Step 2: Update `isModelPrepared` to include all required files/directories**
+- [ ] **Step 3: Write failing test (using Robolectric if possible, or Mockito) for recursive asset copying**
+    - `copyAssets` should correctly copy nested directories like `espeak-ng-data/`.
+- [ ] **Step 4: Update `copyAssets` to be recursive**
+- [ ] **Step 5: Commit**
 ```bash
-git add app/src/main/java/com/example/androidlocaltts/utils/ModelManager.kt
-git commit -m "feat: add ModelManager to handle asset extraction"
+git add app/src/main/java/com/example/androidlocaltts/utils/ModelManager.kt app/src/test/java/com/example/androidlocaltts/utils/ModelManagerTest.kt
+git commit -m "feat: implement recursive asset copying and comprehensive model check"
 ```
 
 ---
 
-## Chunk 3: TTS Engine Implementation
+## Chunk 3: TTS Engine Implementation & Testing
 
-### Task 3.1: Implement SherpaOnnxTtsEngine
+### Task 3.1: Implement Robust SherpaOnnxTtsEngine
 **Files:**
-- Create: `app/src/main/java/com/example/androidlocaltts/engine/SherpaOnnxTtsEngine.kt`
+- Modify: `app/src/main/java/com/example/androidlocaltts/engine/SherpaOnnxTtsEngine.kt`
+- Test: `app/src/test/java/com/example/androidlocaltts/engine/SherpaOnnxTtsEngineTest.kt`
 
-- [ ] **Step 1: Create `SherpaOnnxTtsEngine` with Mutex for thread safety**
-- [ ] **Step 2: Implement `synthesize(text, speed, callback)`**
-    - Use `kotlinx.coroutines.sync.Mutex` to protect `OfflineTts.generate`.
-    - Handle text chunking (split by punctuation) to reduce latency.
-- [ ] **Step 3: Implement chunked output to `SynthesisCallback`**
-- [ ] **Step 4: Commit**
-```bash
-git add app/src/main/java/com/example/androidlocaltts/engine/SherpaOnnxTtsEngine.kt
-git commit -m "feat: implement robust SherpaOnnxTtsEngine with Mutex and chunking"
-```
-
-### Task 3.2: Implement KokoroTtsService
-**Files:**
-- Create: `app/src/main/java/com/example/androidlocaltts/service/KokoroTtsService.kt`
-- Create: `app/src/main/res/xml/tts_engine.xml`
-
-- [ ] **Step 1: Extend `TextToSpeechService` with non-blocking initialization**
-- [ ] **Step 2: Implement `onSynthesizeText` with state checking (Model Ready?)**
-- [ ] **Step 3: Implement `onStop()` to cancel ongoing synthesis tasks**
-- [ ] **Step 4: Register service in `AndroidManifest.xml`**
+- [ ] **Step 1: Write failing test for synthesis lifecycle**
+    - Verify `callback.start()` and `callback.done()` are called even for empty strings or errors.
+- [ ] **Step 2: Update `synthesize` to guarantee `done()` or `error()` call**
+- [ ] **Step 3: Write failing test for thread-safe release**
+    - Verify `release()` waits for ongoing `synthesize()` via Mutex.
+- [ ] **Step 4: Update `release()` and `synthesize()` to use Mutex consistently**
 - [ ] **Step 5: Commit**
 ```bash
-git add app/src/main/java/com/example/androidlocaltts/service/KokoroTtsService.kt app/src/main/res/xml/tts_engine.xml app/src/main/AndroidManifest.xml
-git commit -m "feat: implement lifecycle-aware KokoroTtsService"
+git add app/src/main/java/com/example/androidlocaltts/engine/SherpaOnnxTtsEngine.kt app/src/test/java/com/example/androidlocaltts/engine/SherpaOnnxTtsEngineTest.kt
+git commit -m "feat: guarantee synthesis lifecycle and thread-safe release"
+```
+
+### Task 3.2: Implement Robust KokoroTtsService
+**Files:**
+- Modify: `app/src/main/java/com/example/androidlocaltts/service/KokoroTtsService.kt`
+
+- [ ] **Step 1: Update `isEngineReady` to use `@Volatile` or `AtomicBoolean`**
+- [ ] **Step 2: Implement cancellation logic in `onStop()`**
+- [ ] **Step 3: Commit**
+```bash
+git add app/src/main/java/com/example/androidlocaltts/service/KokoroTtsService.kt
+git commit -m "feat: improve service thread safety and cancellation"
 ```
 
 ---
@@ -113,11 +117,40 @@ git commit -m "feat: add basic UI and settings activity"
 
 ---
 
-## Chunk 5: Verification
+## Chunk 6: Final Robustness Refinements
 
-### Task 5.1: Build and Verify
+### Task 6.1: Strict Model Verification
 **Files:**
-- None (Command-line validation)
+- Modify: `app/src/main/java/com/example/androidlocaltts/utils/ModelManager.kt`
 
-- [ ] **Step 1: Run `./gradlew assembleDebug` to verify build**
-- [ ] **Step 2: Verify that the service is visible in Android TTS settings (Manual verification required)**
+- [ ] **Step 1: Update `isModelPrepared` to check `isDirectory()` for `espeak-ng-data`**
+- [ ] **Step 2: Commit**
+```bash
+git add app/src/main/java/com/example/androidlocaltts/utils/ModelManager.kt
+git commit -m "fix: enforce directory check for espeak-ng-data in ModelManager"
+```
+
+### Task 6.2: Responsive Cancellation and Callback Consistency
+**Files:**
+- Modify: `app/src/main/java/com/example/androidlocaltts/engine/SherpaOnnxTtsEngine.kt`
+
+- [ ] **Step 1: Add `kotlinx.coroutines.yield()` or `isActive` check inside synthesis loop**
+    - Ensure `synthesize` respects coroutine cancellation from `KokoroTtsService`.
+- [ ] **Step 2: Refactor error handling to ensure consistent `start/error` or `start/done` sequence**
+    - Avoid cases where only `error()` is called after `start()`.
+- [ ] **Step 3: Commit**
+```bash
+git add app/src/main/java/com/example/androidlocaltts/engine/SherpaOnnxTtsEngine.kt
+git commit -m "fix: implement responsive cancellation and consistent synthesis callbacks"
+```
+
+### Task 6.3: Enhanced Service Reliability
+**Files:**
+- Modify: `app/src/main/java/com/example/androidlocaltts/service/KokoroTtsService.kt`
+
+- [ ] **Step 1: Add simple retry logic or improved error reporting when engine is initializing**
+- [ ] **Step 2: Commit**
+```bash
+git add app/src/main/java/com/example/androidlocaltts/service/KokoroTtsService.kt
+git commit -m "fix: improve service reliability during initialization"
+```
