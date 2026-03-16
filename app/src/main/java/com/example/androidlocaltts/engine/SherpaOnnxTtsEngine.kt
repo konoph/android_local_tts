@@ -14,7 +14,10 @@ import java.io.File
 import java.nio.ByteBuffer
 import java.nio.ByteOrder
 
-class SherpaOnnxTtsEngine(private val context: Context) {
+class SherpaOnnxTtsEngine(
+    private val context: Context,
+    private val ttsProvider: (OfflineTtsConfig) -> OfflineTts = { OfflineTts(it) }
+) {
     private const val TAG = "SherpaOnnxTtsEngine"
     private var tts: OfflineTts? = null
     private val mutex = Mutex()
@@ -24,8 +27,8 @@ class SherpaOnnxTtsEngine(private val context: Context) {
     fun initialize(): Boolean {
         if (tts != null) return true
 
-        val modelDir = ModelManager.getModelDir(context)
-        if (!ModelManager.isModelPrepared(context)) {
+        val modelDir = ModelManager.getModelDir(context.filesDir)
+        if (!ModelManager.isModelPrepared(context.filesDir)) {
             Log.e(TAG, "Model files not prepared in ${modelDir.absolutePath}")
             return false
         }
@@ -43,7 +46,7 @@ class SherpaOnnxTtsEngine(private val context: Context) {
                     debug = true
                 )
             )
-            tts = OfflineTts(config)
+            tts = ttsProvider(config)
             Log.i(TAG, "Sherpa-ONNX OfflineTts initialized successfully")
             true
         } catch (e: Exception) {
@@ -63,16 +66,17 @@ class SherpaOnnxTtsEngine(private val context: Context) {
         val chunks = text.split(Regex("(?<=[。！？、.,!?])|(?=\\n)")).filter { it.isNotBlank() }
         
         mutex.withLock {
+            var isStarted = false
             try {
-                // Initial setup for the whole synthesis request
-                // We'll use the sample rate from the first generated chunk
-                var isStarted = false
+                if (chunks.isEmpty()) {
+                    // Even if empty, we must signal completion
+                    callback.start(16000, android.media.AudioFormat.ENCODING_PCM_16BIT, 1)
+                    isStarted = true
+                    callback.done()
+                    return
+                }
 
                 for (chunk in chunks) {
-                    if (callback.hasStarted() && !isStarted) {
-                        // Already started by system? This shouldn't happen usually here
-                    }
-
                     val audio = engine.generate(text = chunk, speed = speed, sid = 0)
                     val samples = audio.samples
                     val sampleRate = audio.sampleRate
@@ -92,19 +96,25 @@ class SherpaOnnxTtsEngine(private val context: Context) {
                     byteBuffer.asShortBuffer().put(pcmData)
                     
                     callback.audioAvailable(byteBuffer.array(), 0, byteBuffer.capacity())
-                    
-                    Log.d(TAG, "Synthesized chunk: ${chunk.take(10)}... Size: ${samples.size}")
                 }
                 callback.done()
             } catch (e: Exception) {
                 Log.e(TAG, "Error during synthesis", e)
+                if (!isStarted) {
+                    callback.start(16000, android.media.AudioFormat.ENCODING_PCM_16BIT, 1)
+                }
                 callback.error()
             }
         }
     }
 
     fun release() {
-        tts?.release()
-        tts = null
+        // Use blocking lock if called from onDestroy
+        kotlinx.coroutines.runBlocking {
+            mutex.withLock {
+                tts?.release()
+                tts = null
+            }
+        }
     }
 }
