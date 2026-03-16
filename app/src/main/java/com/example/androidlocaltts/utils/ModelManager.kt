@@ -10,36 +10,25 @@ object ModelManager {
     private const val TAG = "ModelManager"
     private const val ASSET_DIR = "kokoro"
 
-    fun getModelDir(context: Context): File {
-        return File(context.filesDir, ASSET_DIR)
+    fun getModelDir(baseDir: File): File {
+        return File(baseDir, ASSET_DIR)
     }
 
-    fun isModelPrepared(context: Context): Boolean {
-        val modelDir = getModelDir(context)
-        // Check for essential files: model.onnx and tokens.txt
+    fun isModelPrepared(baseDir: File): Boolean {
+        val modelDir = getModelDir(baseDir)
+        // Check for essential files: model.onnx, tokens.txt, voices.bin, and espeak-ng-data dir
         val modelFile = File(modelDir, "model.onnx")
         val tokensFile = File(modelDir, "tokens.txt")
-        return modelFile.exists() && tokensFile.exists()
+        val voicesFile = File(modelDir, "voices.bin")
+        val dataDir = File(modelDir, "espeak-ng-data")
+        
+        return modelFile.exists() && tokensFile.exists() && 
+               voicesFile.exists() && dataDir.exists()
     }
 
     fun copyAssets(context: Context): Boolean {
-        val modelDir = getModelDir(context)
-        if (!modelDir.exists()) {
-            modelDir.mkdirs()
-        }
-
         return try {
-            val assets = context.assets.list(ASSET_DIR) ?: return false
-            for (asset in assets) {
-                if (asset == ".gitkeep") continue
-                
-                val assetPath = "$ASSET_DIR/$asset"
-                val outFile = File(modelDir, asset)
-                
-                // For simplicity, always copy if not exists or size differs
-                // In production, use versioning or checksums
-                copyFile(context, assetPath, outFile)
-            }
+            copyAssetDir(context, ASSET_DIR, getModelDir(context.filesDir))
             true
         } catch (e: IOException) {
             Log.e(TAG, "Error copying assets", e)
@@ -47,7 +36,34 @@ object ModelManager {
         }
     }
 
+    private fun copyAssetDir(context: Context, assetPath: String, destFile: File) {
+        val assets = context.assets.list(assetPath)
+        if (assets != null && assets.isNotEmpty()) {
+            // It's a directory
+            if (!destFile.exists()) {
+                destFile.mkdirs()
+            }
+            for (asset in assets) {
+                if (asset == ".gitkeep") continue
+                val subAssetPath = "$assetPath/$asset"
+                val subDestFile = File(destFile, asset)
+                copyAssetDir(context, subAssetPath, subDestFile)
+            }
+        } else {
+            // It might be a file or an empty directory
+            try {
+                copyFile(context, assetPath, destFile)
+            } catch (e: IOException) {
+                // It was likely an empty directory, or a real error
+                Log.d(TAG, "Skipping $assetPath (could be an empty directory or missing file)")
+            }
+        }
+    }
+
     private fun copyFile(context: Context, assetPath: String, outFile: File) {
+        // Create parent directories if they don't exist (handle case where list() might be ambiguous)
+        outFile.parentFile?.let { if (!it.exists()) it.mkdirs() }
+        
         context.assets.open(assetPath).use { inputStream ->
             FileOutputStream(outFile).use { outputStream ->
                 inputStream.copyTo(outputStream)
