@@ -123,8 +123,8 @@ git commit -m "feat: add basic UI and settings activity"
 **Files:**
 - Modify: `app/src/main/java/com/example/androidlocaltts/utils/ModelManager.kt`
 
-- [ ] **Step 1: Update `isModelPrepared` to check `isDirectory()` for `espeak-ng-data`**
-- [ ] **Step 2: Commit**
+- [x] **Step 1: Update `isModelPrepared` to check `isDirectory()` for `espeak-ng-data`**
+- [x] **Step 2: Commit**
 ```bash
 git add app/src/main/java/com/example/androidlocaltts/utils/ModelManager.kt
 git commit -m "fix: enforce directory check for espeak-ng-data in ModelManager"
@@ -134,11 +134,11 @@ git commit -m "fix: enforce directory check for espeak-ng-data in ModelManager"
 **Files:**
 - Modify: `app/src/main/java/com/example/androidlocaltts/engine/SherpaOnnxTtsEngine.kt`
 
-- [ ] **Step 1: Add `kotlinx.coroutines.yield()` or `isActive` check inside synthesis loop**
+- [x] **Step 1: Add `kotlinx.coroutines.yield()` or `isActive` check inside synthesis loop**
     - Ensure `synthesize` respects coroutine cancellation from `KokoroTtsService`.
-- [ ] **Step 2: Refactor error handling to ensure consistent `start/error` or `start/done` sequence**
+- [x] **Step 2: Refactor error handling to ensure consistent `start/error` or `start/done` sequence**
     - Avoid cases where only `error()` is called after `start()`.
-- [ ] **Step 3: Commit**
+- [x] **Step 3: Commit**
 ```bash
 git add app/src/main/java/com/example/androidlocaltts/engine/SherpaOnnxTtsEngine.kt
 git commit -m "fix: implement responsive cancellation and consistent synthesis callbacks"
@@ -148,8 +148,8 @@ git commit -m "fix: implement responsive cancellation and consistent synthesis c
 **Files:**
 - Modify: `app/src/main/java/com/example/androidlocaltts/service/KokoroTtsService.kt`
 
-- [ ] **Step 1: Add simple retry logic or improved error reporting when engine is initializing**
-- [ ] **Step 2: Commit**
+- [x] **Step 1: Add simple retry logic or improved error reporting when engine is initializing**
+- [x] **Step 2: Commit**
 ```bash
 git add app/src/main/java/com/example/androidlocaltts/service/KokoroTtsService.kt
 git commit -m "fix: improve service reliability during initialization"
