@@ -11,12 +11,23 @@ import kotlinx.coroutines.*
 import java.util.*
 
 class KokoroTtsService : TextToSpeechService() {
-    private const val TAG = "KokoroTtsService"
-    private lateinit var engine: SherpaOnnxTtsEngine
-    private val serviceScope = CoroutineScope(Dispatchers.Main + SupervisorJob())
+    companion object {
+        private const val TAG = "KokoroTtsService"
+    }
+    internal lateinit var engine: SherpaOnnxTtsEngine
+    internal var serviceScope: CoroutineScope = CoroutineScope(Dispatchers.Main + SupervisorJob())
+
+    internal enum class InitState {
+        INITIALIZING,
+        READY,
+        FAILED
+    }
     
     @Volatile
-    private var isEngineReady = false
+    internal var isEngineReady = false
+
+    @Volatile
+    internal var initState: InitState = InitState.INITIALIZING
     
     // Ongoing synthesis job to allow cancellation
     private var synthesisJob: Job? = null
@@ -24,6 +35,7 @@ class KokoroTtsService : TextToSpeechService() {
     override fun onCreate() {
         super.onCreate()
         engine = SherpaOnnxTtsEngine(this)
+        initState = InitState.INITIALIZING
         
         serviceScope.launch(Dispatchers.IO) {
             // 1. Prepare assets if not already done
@@ -34,6 +46,7 @@ class KokoroTtsService : TextToSpeechService() {
             
             // 2. Initialize engine
             isEngineReady = engine.initialize()
+            initState = if (isEngineReady) InitState.READY else InitState.FAILED
             if (isEngineReady) {
                 Log.i(TAG, "Engine ready for requests")
             } else {
@@ -74,9 +87,18 @@ class KokoroTtsService : TextToSpeechService() {
         
         Log.d(TAG, "Synthesis request for text: ${text.take(20)}... Speed: $speechRate")
 
-        if (!isEngineReady) {
-            Log.w(TAG, "Engine not ready yet. Synthesizing dummy silence or error.")
-            callback.error(TextToSpeech.ERROR_SERVICE)
+        handleSynthesis(text, speechRate, callback)
+    }
+
+    internal fun handleSynthesis(text: String, speechRate: Float, callback: SynthesisCallback) {
+        if (initState == InitState.INITIALIZING) {
+            Log.w(TAG, "Engine initializing. Rejecting synthesis request.")
+            reportError(callback, TextToSpeech.ERROR_NOT_INSTALLED_YET)
+            return
+        }
+        if (!isEngineReady || initState == InitState.FAILED) {
+            Log.w(TAG, "Engine not ready. Rejecting synthesis request.")
+            reportError(callback, TextToSpeech.ERROR_SERVICE)
             return
         }
 
@@ -98,5 +120,13 @@ class KokoroTtsService : TextToSpeechService() {
     override fun onStop() {
         Log.d(TAG, "Synthesis stopped by system")
         synthesisJob?.cancel()
+    }
+
+    private fun reportError(callback: SynthesisCallback, code: Int) {
+        try {
+            callback.error(code)
+        } catch (e: NoSuchMethodError) {
+            callback.error()
+        }
     }
 }

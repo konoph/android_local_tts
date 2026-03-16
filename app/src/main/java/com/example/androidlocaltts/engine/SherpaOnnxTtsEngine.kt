@@ -1,6 +1,7 @@
 package com.example.androidlocaltts.engine
 
 import android.content.Context
+import android.content.res.AssetManager
 import android.speech.tts.SynthesisCallback
 import android.util.Log
 import com.example.androidlocaltts.utils.ModelManager
@@ -8,18 +9,39 @@ import com.k2fsa.sherpa.onnx.OfflineTts
 import com.k2fsa.sherpa.onnx.OfflineTtsConfig
 import com.k2fsa.sherpa.onnx.OfflineTtsKokoroModelConfig
 import com.k2fsa.sherpa.onnx.OfflineTtsModelConfig
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import java.io.File
 import java.nio.ByteBuffer
 import java.nio.ByteOrder
+import kotlin.coroutines.coroutineContext
+
+interface OfflineTtsLike {
+    fun generate(text: String, sid: Int, speed: Float): com.k2fsa.sherpa.onnx.GeneratedAudio
+    fun release()
+}
+
+private class OfflineTtsAdapter(private val delegate: OfflineTts) : OfflineTtsLike {
+    override fun generate(text: String, sid: Int, speed: Float): com.k2fsa.sherpa.onnx.GeneratedAudio {
+        return delegate.generate(text, sid, speed)
+    }
+
+    override fun release() {
+        delegate.release()
+    }
+}
+
 
 class SherpaOnnxTtsEngine(
     private val context: Context,
-    private val ttsProvider: (OfflineTtsConfig) -> OfflineTts = { OfflineTts(it) }
+    private val ttsProvider: (AssetManager, OfflineTtsConfig) -> OfflineTtsLike = { assets, config -> OfflineTtsAdapter(OfflineTts(assets, config)) }
 ) {
-    private const val TAG = "SherpaOnnxTtsEngine"
-    private var tts: OfflineTts? = null
+    companion object {
+        private const val TAG = "SherpaOnnxTtsEngine"
+    }
+    private var tts: OfflineTtsLike? = null
     private val mutex = Mutex()
 
     fun isReady(): Boolean = tts != null
@@ -46,7 +68,7 @@ class SherpaOnnxTtsEngine(
                     debug = true
                 )
             )
-            tts = ttsProvider(config)
+            tts = ttsProvider(context.assets, config)
             Log.i(TAG, "Sherpa-ONNX OfflineTts initialized successfully")
             true
         } catch (e: Exception) {
@@ -77,6 +99,7 @@ class SherpaOnnxTtsEngine(
                 }
 
                 for (chunk in chunks) {
+                    coroutineContext.ensureActive()
                     val audio = engine.generate(text = chunk, speed = speed, sid = 0)
                     val samples = audio.samples
                     val sampleRate = audio.sampleRate
@@ -89,6 +112,9 @@ class SherpaOnnxTtsEngine(
                     // Convert float samples to PCM 16-bit
                     val pcmData = ShortArray(samples.size)
                     for (i in samples.indices) {
+                        if (i % 1024 == 0) {
+                            coroutineContext.ensureActive()
+                        }
                         pcmData[i] = (samples[i] * Short.MAX_VALUE).toInt().coerceIn(Short.MIN_VALUE.toInt(), Short.MAX_VALUE.toInt()).toShort()
                     }
 
@@ -98,6 +124,12 @@ class SherpaOnnxTtsEngine(
                     callback.audioAvailable(byteBuffer.array(), 0, byteBuffer.capacity())
                 }
                 callback.done()
+            } catch (e: CancellationException) {
+                Log.i(TAG, "Synthesis cancelled", e)
+                if (!isStarted) {
+                    callback.start(16000, android.media.AudioFormat.ENCODING_PCM_16BIT, 1)
+                }
+                callback.error()
             } catch (e: Exception) {
                 Log.e(TAG, "Error during synthesis", e)
                 if (!isStarted) {
