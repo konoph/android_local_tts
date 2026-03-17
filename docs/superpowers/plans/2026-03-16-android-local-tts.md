@@ -18,15 +18,15 @@
 - Create: `settings.gradle`
 - Create: `app/src/main/AndroidManifest.xml`
 
-- [ ] **Step 1: Define root project structure**
-- [ ] **Step 2: Add Sherpa-ONNX and Coroutine dependencies to `app/build.gradle`**
+- [x] **Step 1: Define root project structure**
+- [x] **Step 2: Add Sherpa-ONNX and Coroutine dependencies to `app/build.gradle`**
 ```gradle
 dependencies {
     implementation 'com.k2fsa.sherpa.onnx:sherpa-onnx-android:latest.release'
     implementation "org.jetbrains.kotlinx:kotlinx-coroutines-android:1.7.3"
 }
 ```
-- [ ] **Step 3: Commit**
+- [x] **Step 3: Commit**
 ```bash
 git add app/build.gradle settings.gradle app/src/main/AndroidManifest.xml
 git commit -m "chore: initial project scaffolding with sherpa-onnx dependencies"
@@ -36,9 +36,9 @@ git commit -m "chore: initial project scaffolding with sherpa-onnx dependencies"
 **Files:**
 - Create: `app/src/main/assets/kokoro/`
 
-- [ ] **Step 1: Create the kokoro directory in assets**
-- [ ] **Step 2: Note: Actual model files will be added later or assumed to be provided**
-- [ ] **Step 3: Commit**
+- [x] **Step 1: Create the kokoro directory in assets**
+- [x] **Step 2: Note: Actual model files will be added later or assumed to be provided**
+- [x] **Step 3: Commit**
 ```bash
 git add app/src/main/assets/kokoro/
 git commit -m "chore: create assets directory for kokoro model"
@@ -53,13 +53,13 @@ git commit -m "chore: create assets directory for kokoro model"
 - Create/Modify: `app/src/main/java/com/example/androidlocaltts/utils/ModelManager.kt`
 - Test: `app/src/test/java/com/example/androidlocaltts/utils/ModelManagerTest.kt`
 
-- [ ] **Step 1: Write failing test for recursive asset checking**
+- [x] **Step 1: Write failing test for recursive asset checking**
     - `isModelPrepared` should check for `model.onnx`, `tokens.txt`, `voices.bin`, and `espeak-ng-data/` directory.
-- [ ] **Step 2: Update `isModelPrepared` to include all required files/directories**
-- [ ] **Step 3: Write failing test (using Robolectric if possible, or Mockito) for recursive asset copying**
+- [x] **Step 2: Update `isModelPrepared` to include all required files/directories**
+- [x] **Step 3: Write failing test (using Robolectric if possible, or Mockito) for recursive asset copying**
     - `copyAssets` should correctly copy nested directories like `espeak-ng-data/`.
-- [ ] **Step 4: Update `copyAssets` to be recursive**
-- [ ] **Step 5: Commit**
+- [x] **Step 4: Update `copyAssets` to be recursive**
+- [x] **Step 5: Commit**
 ```bash
 git add app/src/main/java/com/example/androidlocaltts/utils/ModelManager.kt app/src/test/java/com/example/androidlocaltts/utils/ModelManagerTest.kt
 git commit -m "feat: implement recursive asset copying and comprehensive model check"
@@ -74,13 +74,13 @@ git commit -m "feat: implement recursive asset copying and comprehensive model c
 - Modify: `app/src/main/java/com/example/androidlocaltts/engine/SherpaOnnxTtsEngine.kt`
 - Test: `app/src/test/java/com/example/androidlocaltts/engine/SherpaOnnxTtsEngineTest.kt`
 
-- [ ] **Step 1: Write failing test for synthesis lifecycle**
+- [x] **Step 1: Write failing test for synthesis lifecycle**
     - Verify `callback.start()` and `callback.done()` are called even for empty strings or errors.
-- [ ] **Step 2: Update `synthesize` to guarantee `done()` or `error()` call**
-- [ ] **Step 3: Write failing test for thread-safe release**
+- [x] **Step 2: Update `synthesize` to guarantee `done()` or `error()` call**
+- [x] **Step 3: Write failing test for thread-safe release**
     - Verify `release()` waits for ongoing `synthesize()` via Mutex.
-- [ ] **Step 4: Update `release()` and `synthesize()` to use Mutex consistently**
-- [ ] **Step 5: Commit**
+- [x] **Step 4: Update `release()` and `synthesize()` to use Mutex consistently**
+- [x] **Step 5: Commit**
 ```bash
 git add app/src/main/java/com/example/androidlocaltts/engine/SherpaOnnxTtsEngine.kt app/src/test/java/com/example/androidlocaltts/engine/SherpaOnnxTtsEngineTest.kt
 git commit -m "feat: guarantee synthesis lifecycle and thread-safe release"
@@ -90,9 +90,9 @@ git commit -m "feat: guarantee synthesis lifecycle and thread-safe release"
 **Files:**
 - Modify: `app/src/main/java/com/example/androidlocaltts/service/KokoroTtsService.kt`
 
-- [ ] **Step 1: Update `isEngineReady` to use `@Volatile` or `AtomicBoolean`**
-- [ ] **Step 2: Implement cancellation logic in `onStop()`**
-- [ ] **Step 3: Commit**
+- [x] **Step 1: Update `isEngineReady` to use `@Volatile` or `AtomicBoolean`**
+- [x] **Step 2: Implement cancellation logic in `onStop()`**
+- [x] **Step 3: Commit**
 ```bash
 git add app/src/main/java/com/example/androidlocaltts/service/KokoroTtsService.kt
 git commit -m "feat: improve service thread safety and cancellation"
@@ -107,9 +107,9 @@ git commit -m "feat: improve service thread safety and cancellation"
 - Create: `app/src/main/java/com/example/androidlocaltts/ui/MainActivity.kt`
 - Create: `app/src/main/java/com/example/androidlocaltts/ui/SettingsActivity.kt`
 
-- [ ] **Step 1: Create `MainActivity` to show model status and "Open System TTS Settings" button**
-- [ ] **Step 2: Create `SettingsActivity` for future configuration (optional for now)**
-- [ ] **Step 3: Commit**
+- [x] **Step 1: Create `MainActivity` to show model status and "Open System TTS Settings" button**
+- [x] **Step 2: Create `SettingsActivity` for future configuration (optional for now)**
+- [x] **Step 3: Commit**
 ```bash
 git add app/src/main/java/com/example/androidlocaltts/ui/MainActivity.kt app/src/main/java/com/example/androidlocaltts/ui/SettingsActivity.kt
 git commit -m "feat: add basic UI and settings activity"
